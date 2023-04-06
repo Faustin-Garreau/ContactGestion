@@ -2,10 +2,13 @@
 require_once('config.php');
   $_SESSION['erreur'] = '';
 
+$contact = $dbh->prepare('SELECT * FROM informations WHERE id = ?');
+$contact->execute(array($_GET['id']));
+$contact = $contact->fetch();
+
 if($_SERVER['REQUEST_METHOD'] == 'POST') {
     if (isset($_POST['nom'], $_POST['prenom'], $_POST['email'], $_POST['adresse'], $_POST['codepostal'], $_POST['entreprise'], $_POST['telephone']) &&
         !empty($_POST['nom']) && !empty($_POST['prenom']) && !empty($_POST['email']) && !empty($_POST['adresse']) && !empty($_POST['codepostal']) && !empty($_POST['entreprise']) && !empty($_POST['telephone'])) {
-
         $nom = htmlentities($_POST['nom']);
         $prenom = htmlentities($_POST['prenom']);
         $email = htmlentities($_POST['email']);
@@ -21,6 +24,9 @@ if($_SERVER['REQUEST_METHOD'] == 'POST') {
             $count_mail = $dbh->prepare('SELECT COUNT(*) FROM informations WHERE email = ?');
             $count_mail->execute(array($email));
             $mail_count = $count_mail->fetchColumn();
+            if ($_POST['email'] == $contact['email']) {
+                $mail_count = 0;
+            }
             if($mail_count > 0) {
                 $_SESSION['erreur'] = "Le mail est déjà utilisé";
                 $class = 'error';
@@ -32,10 +38,11 @@ if($_SERVER['REQUEST_METHOD'] == 'POST') {
                     $_SESSION['erreur'] = "Le numéro de téléphone doit contenir 10 chiffres";
                     $class = 'error';
                 } else {
-                    $insert = $dbh->prepare("INSERT INTO informations(nom, prenom, email, adresse, code_postal, entreprise, telephone) VALUES(?, ?, ?, ?, ?, ?, ?)");
-                    $insert->execute(array($nom, $prenom, $email, $adresse, $codepostal, $entreprise, $telephone));
+                    $update = $dbh->prepare("UPDATE informations SET nom = ?, prenom = ?, email = ?, adresse = ?, code_postal = ?, entreprise = ?, telephone = ? WHERE id = ?");
+                    $update->execute(array($nom, $prenom, $email, $adresse, $codepostal, $entreprise, $telephone, $_GET['id']));
                     $_SESSION['erreur'] = "Votre demande a bien été envoyée !";
                     $class = 'succes';
+                    header('location:one_contact.php?id=' . $_GET['id']);
                 }
             }
         }
@@ -63,27 +70,27 @@ if($_SERVER['REQUEST_METHOD'] == 'POST') {
     </header>
 
     <div class="form_placement">
-        <form action="index.php" method="POST">
+        <form action="modif_contact.php?id=<?=$_GET['id']?>" method="POST">
             <label for="nom">Nom :</label>
-            <input value="<?= isset($_POST['nom']) && $_SESSION['erreur'] != "Votre demande a bien été envoyée !" ? $_POST['nom'] : '' ?>" type="text" id="nom" name="nom">
+            <input value="<?= $contact['nom'] ?>" type="text" id="nom" name="nom">
 
             <label for="prenom">Prénom :</label>
-            <input value="<?= isset($_POST['prenom']) && $_SESSION['erreur'] != "Votre demande a bien été envoyée !" ? $_POST['prenom'] : '' ?>" type="text" id="prenom" name="prenom">
+            <input value="<?= $contact['prenom'] ?>" type="text" id="prenom" name="prenom">
 
             <label for="email">Email :</label>
-            <input value="<?= isset($_POST['email']) && $_SESSION['erreur'] != "Votre demande a bien été envoyée !" ? $_POST['email'] : '' ?>" type="text" id="email" name="email">
+            <input value="<?= $contact['email'] ?>" type="text" id="email" name="email">
 
             <label for="adresse">Adresse :</label>
-            <textarea id="adresse" name="adresse" rows="3"><?= isset($_POST['adresse']) && $_SESSION['erreur'] != "Votre demande a bien été envoyée !" ? $_POST['adresse'] : '' ?></textarea>
+            <textarea id="adresse" name="adresse" rows="3"><?= $contact['adresse'] ?></textarea>
 
             <label for="codepostal">Code postal :</label>
-            <input value="<?= isset($_POST['codepostal']) && $_SESSION['erreur'] != "Votre demande a bien été envoyée !" ? $_POST['codepostal'] : '' ?>" type="text" id="codepostal" name="codepostal">
+            <input value="<?= $contact['code_postal'] ?>" type="text" id="codepostal" name="codepostal">
 
             <label for="entreprise">Entreprise :</label>
-            <input value="<?= isset($_POST['entreprise']) && $_SESSION['erreur'] != "Votre demande a bien été envoyée !" ? $_POST['entreprise'] : '' ?>" type="text" id="entreprise" name="entreprise">
+            <input value="<?= $contact['entreprise'] ?>" type="text" id="entreprise" name="entreprise">
 
             <label for="telephone">Numéro de téléphone :</label>
-            <input value="<?= isset($_POST['telephone']) && $_SESSION['erreur'] != "Votre demande a bien été envoyée !" ? $_POST['telephone'] : '' ?>" type="tel" id="telephone" name="telephone">
+            <input value="<?= $contact['telephone'] ?>" type="tel" id="telephone" name="telephone">
 
             <input type="submit" value="Envoyer">
             <?php if(isset($_SESSION['erreur'])){ ?>
